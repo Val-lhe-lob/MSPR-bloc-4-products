@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MSPR_bloc_4_products.Data;
 using MSPR_bloc_4_products.Models;
 
-namespace VotreProjet.Controllers
+namespace MSPR_bloc_4_products.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
