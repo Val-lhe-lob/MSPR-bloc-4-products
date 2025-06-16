@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSPR-bloc-4-products", "MSP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSPR-bloc-4-products.tests", "..\MSPR-bloc-4-products.tests\MSPR-bloc-4-products.tests\MSPR-bloc-4-products.tests.csproj", "{A30AAEA5-399B-5B76-2212-B8C7426522A1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSPR-bloc-4-products.test-integration", "MSPR-bloc-4-products.test-integration\MSPR-bloc-4-products.test-integration.csproj", "{763B97F2-B738-4444-895F-61425C1718B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A30AAEA5-399B-5B76-2212-B8C7426522A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A30AAEA5-399B-5B76-2212-B8C7426522A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A30AAEA5-399B-5B76-2212-B8C7426522A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{763B97F2-B738-4444-895F-61425C1718B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{763B97F2-B738-4444-895F-61425C1718B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{763B97F2-B738-4444-895F-61425C1718B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{763B97F2-B738-4444-895F-61425C1718B4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
