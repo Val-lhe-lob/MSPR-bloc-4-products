@@ -3,8 +3,6 @@ using Microsoft.VisualStudio.TestPlatform.TestHost;
 using MSPR_bloc_4_products.Models;
 using System.Net;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
-using Xunit;
 
 public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
