@@ -7,6 +7,8 @@
     <RootNamespace>MSPR_bloc_4_products</RootNamespace>
     <UserSecretsId>359c4c5e-c4be-4745-af71-a40bfbf65c04</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	<PreserveCompilationContext>true</PreserveCompilationContext>
+	<CopyOutputSymbolsToPublishDirectory>true</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
   <ItemGroup>

@@ -23,10 +23,10 @@ jobs:
       run: dotnet restore
 
     - name: Build solution
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build --configuration Release
 
     - name: Run unit tests
       run: dotnet test MSPR-bloc-4-products.tests/MSPR-bloc-4-products.tests.csproj --no-build --configuration Release --logger trx
 
     - name: Run integration tests
-      run: dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --no-build --configuration Release --logger trx
+      run: dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release --logger trx
