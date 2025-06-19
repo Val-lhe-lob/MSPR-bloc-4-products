@@ -21,7 +21,7 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
             services.AddDbContext<ProductDbContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDb");
-                
+
             });
 
             // Créer la base et ajouter des données de test
