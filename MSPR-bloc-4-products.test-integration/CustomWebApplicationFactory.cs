@@ -10,24 +10,27 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
     {
         builder.ConfigureServices(services =>
         {
-            // Supprimer le DbContext SQL Server
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<ProductDbContext>));
-            if (descriptor != null)
+            // Supprimer tous les DbContext enregistrés
+            var descriptors = services.Where(
+                d => d.ServiceType == typeof(DbContextOptions<ProductDbContext>)).ToList();
+
+            foreach (var descriptor in descriptors)
                 services.Remove(descriptor);
 
-            // Ajouter le DbContext InMemory
+            // Ajouter InMemory pour les tests
             services.AddDbContext<ProductDbContext>(options =>
-            {
-                options.UseInMemoryDatabase("TestDb");
+                options.UseInMemoryDatabase("TestDb"));
 
-            });
-
-            // Créer la base et ajouter des données de test
+            // Créer la base
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
-            db.Database.EnsureCreated();
+            if (db.Database.IsInMemory())
+            {
+                db.Database.EnsureDeleted();
+                db.Database.EnsureCreated();
+            }
+
             if (!db.Products.Any())
             {
                 db.Products.Add(new MSPR_bloc_4_products.Models.Product
@@ -42,5 +45,6 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
                 db.SaveChanges();
             }
         });
+
     }
 }
