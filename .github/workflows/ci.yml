@@ -22,19 +22,19 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build solution
+    - name: Build all projects (including integration tests)
       run: dotnet build --no-restore --configuration Release
+
+    - name: Publish application (needed for integration tests)
+      run: dotnet publish MSPR-bloc-4-products/MSPR-bloc-4-products.csproj -c Release -o published
 
     - name: Run unit tests
       run: dotnet test MSPR-bloc-4-products.tests/MSPR-bloc-4-products.tests.csproj --no-build --configuration Release --logger trx
 
-    - name: Publish application (required for integration tests)
-      run: dotnet publish MSPR-bloc-4-products/MSPR-bloc-4-products.csproj --configuration Release --output ./published-app
-
     - name: Run integration tests
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
       run: |
-        dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj \
-          --no-build \
-          --configuration Release \
-          --logger trx \
-          -- TestHostPath=$(realpath ./published-app)
+        dotnet build MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --no-restore --configuration Release
+        cp -r published/* MSPR-bloc-4-products.test-integration/bin/Release/net8.0/
+        dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --no-build --configuration Release --logger trx
