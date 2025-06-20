@@ -25,6 +25,7 @@ jobs:
     - name: Build solution
       run: dotnet build --configuration Release --no-restore
 
+    # Ensures testhost.deps.json and all dependencies are available
     - name: Publish integration test project (ensures testhost.deps.json is present)
       run: dotnet publish MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release
 
