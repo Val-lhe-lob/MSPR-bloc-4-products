@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MSPR_bloc_4_products.Data;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,11 +56,26 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseAuthentication();
     app.UseAuthorization();
 }
+else
+{
+    // Dans "Testing", tu simules que tout est déjà autorisé
+    app.Use(async (context, next) =>
+    {
+        var identity = new ClaimsIdentity(new[] {
+            new Claim(ClaimTypes.Name, "TestUser")
+        }, "TestAuth");
+
+        context.User = new ClaimsPrincipal(identity);
+        await next();
+    });
+}
+
 app.MapControllers();
 
 app.Run();
