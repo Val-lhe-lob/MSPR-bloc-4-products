@@ -4,33 +4,40 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MSPR_bloc_4_products.Data;
 
-public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup> where TStartup : class
+public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
+    where TStartup : class
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing"); // Passe l’environnement en “Testing”
+
         builder.ConfigureServices(services =>
         {
-            // Supprimer tous les DbContext enregistrés
-            var descriptors = services.Where(
-                d => d.ServiceType == typeof(DbContextOptions<ProductDbContext>)).ToList();
+            // Supprime toute registration de DbContext
+            var descriptors = services
+                .Where(d => d.ServiceType == typeof(DbContextOptions<ProductDbContext>))
+                .ToList();
 
             foreach (var descriptor in descriptors)
+            {
                 services.Remove(descriptor);
+            }
 
-            // Ajouter InMemory pour les tests
+            // Ajoute un context InMemory pour les tests
             services.AddDbContext<ProductDbContext>(options =>
                 options.UseInMemoryDatabase("TestDb"));
 
-            // Créer la base
+            // Construit le service provider
             var sp = services.BuildServiceProvider();
+
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
-            if (db.Database.IsInMemory())
-            {
-                db.Database.EnsureDeleted();
-                db.Database.EnsureCreated();
-            }
 
+            // Initialise la base
+            db.Database.EnsureDeleted();
+            db.Database.EnsureCreated();
+
+            // Seed d’un produit pour les tests
             if (!db.Products.Any())
             {
                 db.Products.Add(new MSPR_bloc_4_products.Models.Product
@@ -45,6 +52,5 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
                 db.SaveChanges();
             }
         });
-
     }
 }
