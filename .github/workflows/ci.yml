@@ -1,45 +1,36 @@
-name: .NET CI
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
 
-    # Ensures testhost.deps.json and all dependencies are available
-    - name: Publish integration test project (ensures testhost.deps.json is present)
-      run: dotnet publish MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release
+      - name: Publish integration test project
+        run: dotnet publish MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release
 
-    - name: Run unit tests
-      run: dotnet test MSPR-bloc-4-products.tests/MSPR-bloc-4-products.tests.csproj --configuration Release --no-build --logger trx --results-directory ./TestResults/unit
+      - name: Copy published files for runtime
+        run: cp -r MSPR-bloc-4-products.test-integration/bin/Release/net8.0/publish/* MSPR-bloc-4-products.test-integration/bin/Release/net8.0/
 
-    - name: Run integration tests
-      run: |
-        cp -r MSPR-bloc-4-products.test-integration/bin/Release/net8.0/publish/* MSPR-bloc-4-products.test-integration/bin/Release/net8.0/
-        dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release --no-build --logger trx --results-directory ./TestResults/integration
+      - name: Run tests (with Testing env)
+        run: dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: TestResults
-        path: ./TestResults
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults
+          path: ./TestResults
