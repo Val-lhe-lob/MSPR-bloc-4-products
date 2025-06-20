@@ -57,17 +57,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-if (!app.Environment.IsEnvironment("Testing"))
+app.UseAuthentication();
+
+if (app.Environment.IsEnvironment("Testing"))
 {
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
-else
-{
-    // Dans "Testing", tu simules que tout est déjà autorisé
+    // Simule un utilisateur authentifié en test
     app.Use(async (context, next) =>
     {
-        var identity = new ClaimsIdentity(new[] {
+        var identity = new ClaimsIdentity(new[]
+        {
             new Claim(ClaimTypes.Name, "TestUser")
         }, "TestAuth");
 
@@ -75,6 +73,9 @@ else
         await next();
     });
 }
+
+app.UseAuthorization();
+
 
 app.MapControllers();
 
