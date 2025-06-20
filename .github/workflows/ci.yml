@@ -28,15 +28,13 @@ jobs:
     - name: Run unit tests
       run: dotnet test MSPR-bloc-4-products.tests/MSPR-bloc-4-products.tests.csproj --no-build --configuration Release --logger trx
 
-    - name: Publish app (for integration tests)
-      run: dotnet publish MSPR-bloc-4-products/MSPR-bloc-4-products.csproj --configuration Release --output ./publish
+    - name: Publish application (required for integration tests)
+      run: dotnet publish MSPR-bloc-4-products/MSPR-bloc-4-products.csproj --configuration Release --output ./published-app
 
-    - name: Run integration tests with published app
-      env:
-        ASPNETCORE_ENVIRONMENT: Development
+    - name: Run integration tests
       run: |
         dotnet test MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj \
           --no-build \
           --configuration Release \
           --logger trx \
-          -- TestHostPath=$(realpath ./publish)
+          -- TestHostPath=$(realpath ./published-app)
