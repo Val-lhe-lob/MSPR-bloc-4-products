@@ -58,8 +58,8 @@ app.UseHttpsRedirection();
 if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseAuthentication();
+    app.UseAuthorization();
 }
-app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
