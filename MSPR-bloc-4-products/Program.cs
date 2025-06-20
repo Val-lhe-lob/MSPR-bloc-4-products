@@ -55,7 +55,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseAuthentication();
+}
 app.UseAuthorization();
 app.MapControllers();
 
