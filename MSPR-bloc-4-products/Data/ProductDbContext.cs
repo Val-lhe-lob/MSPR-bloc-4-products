@@ -22,7 +22,7 @@ public partial class ProductDbContext : DbContext
             entity.ToTable("Product");
 
             entity.Property(e => e.IdProduit)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasColumnName("Id_produit");
             entity.Property(e => e.Couleur)
                 .HasMaxLength(50)
