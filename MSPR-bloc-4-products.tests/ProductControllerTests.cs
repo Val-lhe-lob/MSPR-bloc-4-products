@@ -115,8 +115,10 @@ namespace MSPR_bloc_4_products.Tests
             context.Products.Add(new Product { IdProduit = 1, Nom = "Ancien", Prix = 10 });
             context.SaveChanges();
 
-            var controller = new ProductsController(context);
+            // Détacher l'ancien objet pour éviter le conflit de tracking
+            context.Entry(context.Products.Find(1)).State = EntityState.Detached;
 
+            var controller = new ProductsController(context);
             var updatedProduct = new Product { IdProduit = 1, Nom = "Modifié", Prix = 20 };
 
             var result = await controller.UpdateProduct(1, updatedProduct);

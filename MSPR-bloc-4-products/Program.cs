@@ -1,17 +1,29 @@
-using Microsoft.EntityFrameworkCore;
-using MSPR_bloc_4_products.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MSPR_bloc_4_products.Data;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Détecte si on est dans l’environnement de test
+bool isTesting = builder.Environment.IsEnvironment("Testing");
 
-// Ajouter le DbContext ici
+// Ajoute le DbContext de façon conditionnelle
 builder.Services.AddDbContext<ProductDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (isTesting)
+    {
+        // L’InMemory sera ajouté par CustomWebApplicationFactory
+    }
+    else
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+});
 
+// Authentification JWT
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -31,6 +43,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -43,7 +56,29 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 app.UseAuthentication();
+
+if (app.Environment.IsEnvironment("Testing"))
+{
+    // Simule un utilisateur authentifié en test
+    app.Use(async (context, next) =>
+    {
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.Name, "TestUser")
+        }, "TestAuth");
+
+        context.User = new ClaimsPrincipal(identity);
+        await next();
+    });
+}
+
 app.UseAuthorization();
+
+
 app.MapControllers();
+
 app.Run();
+
+public partial class Program { }

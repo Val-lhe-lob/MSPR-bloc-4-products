@@ -74,10 +74,15 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
             Couleur = "Vert",
             Stock = 1
         };
+
         var createResponse = await _client.PostAsJsonAsync("/api/Products", product);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
         var created = await createResponse.Content.ReadFromJsonAsync<Product>();
+        created.Should().NotBeNull();
 
         var response = await _client.DeleteAsync($"/api/Products/{created.IdProduit}");
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
     }
 }
