@@ -18,7 +18,8 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest -f MSPR-bloc-4-products/Dockerfile .
+
 
       - name: Push image to Docker Hub
         run: docker push ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest
