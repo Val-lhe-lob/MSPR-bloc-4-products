@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - develop
+    tags:
+      - 'v*'
 
 jobs:
   docker-deploy:
@@ -17,9 +19,24 @@ jobs:
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      - name: Extract version from tag (if any)
+        id: get_version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "VERSION=latest" >> $GITHUB_ENV
+          fi
+
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest -f MSPR-bloc-4-products/Dockerfile .
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:${{ env.VERSION }} -f MSPR-bloc-4-products/Dockerfile .
 
+      - name: Push versioned image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:${{ env.VERSION }}
 
-      - name: Push image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest
+      - name: Tag as latest (only on master)
+        if: github.ref == 'refs/heads/master' && env.VERSION != 'latest'
+        run: |
+          docker tag ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:${{ env.VERSION }} ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/mspr-products-api:latest
