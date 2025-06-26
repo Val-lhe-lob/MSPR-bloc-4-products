@@ -1,0 +1,44 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish integration test project
+        run: dotnet publish MSPR-bloc-4-products.test-integration/MSPR-bloc-4-products.test-integration.csproj --configuration Release
+
+      - name: Copy published files for runtime
+        run: cp -r MSPR-bloc-4-products.test-integration/bin/Release/net8.0/publish/* MSPR-bloc-4-products.test-integration/bin/Release/net8.0/
+
+      - name: Run tests (with Testing env)
+        run: dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults
+          path: ./TestResults
