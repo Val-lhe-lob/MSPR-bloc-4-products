@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MSPR_bloc_4_products.Data;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
-// Configuration initiale
 var builder = WebApplication.CreateBuilder(args);
 bool isTesting = builder.Environment.IsEnvironment("Testing");
 
@@ -44,7 +46,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Authentification
+// Authentification JWT ou Mock
 if (!isTesting)
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -64,15 +66,15 @@ if (!isTesting)
 }
 else
 {
+    // Ajout d'un handler minimaliste pour satisfaire UseAuthorization sans package externe
     builder.Services.AddAuthentication("TestAuth")
-        .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestAuth", options => { });
+        .AddScheme<AuthenticationSchemeOptions, DummyHandler>("TestAuth", _ => { });
 }
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Middleware pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -81,20 +83,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Toujours utiliser Auth pour satisfaire Authorization Middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
 
-// Classe partielle pour les tests
 public partial class Program { }
 
-// TestAuthHandler pour mocker l'utilisateur en mode Testing
-public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+// DummyHandler interne sans dépendance pour mocker automatiquement le user dans les tests
+public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public TestAuthHandler(
+    public DummyHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
