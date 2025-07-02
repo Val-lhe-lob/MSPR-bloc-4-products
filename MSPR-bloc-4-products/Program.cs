@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -5,7 +6,9 @@ using Microsoft.OpenApi.Models;
 using MSPR_bloc_4_products.Data;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
 
+// Configuration initiale
 var builder = WebApplication.CreateBuilder(args);
 bool isTesting = builder.Environment.IsEnvironment("Testing");
 
@@ -41,7 +44,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Authentification JWT
+// Authentification
 if (!isTesting)
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -59,11 +62,17 @@ if (!isTesting)
         };
     });
 }
+else
+{
+    builder.Services.AddAuthentication("TestAuth")
+        .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestAuth", options => { });
+}
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
+// Middleware pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -72,28 +81,38 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-if (!isTesting)
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+
+// Classe partielle pour les tests
+public partial class Program { }
+
+// TestAuthHandler pour mocker l'utilisateur en mode Testing
+public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
-else
-{
-    // Mock Auth en Testing si nécessaire
-    app.Use(async (context, next) =>
+    public TestAuthHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock)
+        : base(options, logger, encoder, clock)
+    { }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var identity = new ClaimsIdentity(new[]
+        var claims = new[]
         {
             new Claim(ClaimTypes.Name, "TestUser"),
             new Claim(ClaimTypes.Role, "admin")
-        }, "TestAuth");
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "TestAuth");
 
-        context.User = new ClaimsPrincipal(identity);
-        await next();
-    });
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
 }
-
-app.MapControllers();
-app.Run();
-
-public partial class Program { }
