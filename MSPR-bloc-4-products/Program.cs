@@ -1,53 +1,85 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MSPR_bloc_4_products.Data;
+using MSPR_bloc_4_products.Services;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Détecte si on est dans l’environnement de test
 bool isTesting = builder.Environment.IsEnvironment("Testing");
 
-// Ajoute le DbContext de façon conditionnelle
+// DbContext conditionnel
 builder.Services.AddDbContext<ProductDbContext>(options =>
 {
-    if (isTesting)
-    {
-        // L’InMemory sera ajouté par CustomWebApplicationFactory
-    }
-    else
-    {
+    if (!isTesting)
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    }
 });
 
-// Authentification JWT
-builder.Services.AddAuthentication(options =>
+// Swagger avec JWT
+builder.Services.AddSwaggerGen(c =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Products API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-    };
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Ex: Bearer eyJhbGciOiJIUzI1NiIs..."
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            new string[] { }
+        }
+    });
 });
+
+// Authentification JWT ou Mock
+if (!isTesting)
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
+}
+else
+{
+    builder.Services.AddAuthentication("TestAuth")
+        .AddScheme<AuthenticationSchemeOptions, DummyHandler>("TestAuth", _ => { });
+}
 
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Injection RabbitMQ Streams Consumer
+builder.Services.AddSingleton<RabbitMqConsumer>();
 
 var app = builder.Build();
+
+//Initialisation du Consumer RabbitMQ
+var consumer = app.Services.GetRequiredService<RabbitMqConsumer>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -58,27 +90,35 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-
-if (app.Environment.IsEnvironment("Testing"))
-{
-    // Simule un utilisateur authentifié en test
-    app.Use(async (context, next) =>
-    {
-        var identity = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.Name, "TestUser")
-        }, "TestAuth");
-
-        context.User = new ClaimsPrincipal(identity);
-        await next();
-    });
-}
-
 app.UseAuthorization();
 
-
 app.MapControllers();
-
 app.Run();
 
 public partial class Program { }
+
+// DummyHandler interne sans dépendance pour mocker automatiquement le user dans les tests
+public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    public DummyHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock)
+        : base(options, logger, encoder, clock)
+    { }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, "TestUser"),
+            new Claim(ClaimTypes.Role, "admin")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "TestAuth");
+
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+}
