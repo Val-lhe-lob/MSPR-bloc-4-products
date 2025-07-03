@@ -51,44 +51,40 @@ builder.Services.AddSwaggerGen(c =>
 if (!isTesting)
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-        };
-    });
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            };
+        });
 }
 else
 {
-
-    // Ajout d'un handler minimaliste pour satisfaire UseAuthorization sans package externe
-
     builder.Services.AddAuthentication("TestAuth")
         .AddScheme<AuthenticationSchemeOptions, DummyHandler>("TestAuth", _ => { });
 }
 
 builder.Services.AddControllers();
 
-// Injection RabbitMQ Streams Consumer
-builder.Services.AddSingleton<RabbitMqConsumer>();
-
-
-var app = builder.Build();
-
-//Initialisation du Consumer RabbitMQ
-var consumer = app.Services.GetRequiredService<RabbitMqConsumer>();
-
-
+// Injection RabbitMQ Streams Consumer uniquement si ce n'est pas un test
 if (!isTesting)
 {
     builder.Services.AddSingleton<RabbitMqConsumer>();
+}
+
+var app = builder.Build();
+
+// Initialisation du Consumer RabbitMQ uniquement si ce n'est pas un test
+if (!isTesting)
+{
+    var consumer = app.Services.GetRequiredService<RabbitMqConsumer>();
 }
 
 if (app.Environment.IsDevelopment())
@@ -98,17 +94,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Toujours utiliser Auth pour satisfaire Authorization Middleware
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 app.Run();
 
 public partial class Program { }
 
-// DummyHandler interne sans dépendance pour mocker automatiquement le user dans les tests
+// DummyHandler pour les tests (Mock Auth)
 public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public DummyHandler(
