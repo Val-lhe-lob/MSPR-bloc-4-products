@@ -85,6 +85,12 @@ var app = builder.Build();
 //Initialisation du Consumer RabbitMQ
 var consumer = app.Services.GetRequiredService<RabbitMqConsumer>();
 
+
+if (!isTesting)
+{
+    builder.Services.AddSingleton<RabbitMqConsumer>();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
