@@ -1,10 +1,10 @@
-﻿using MSPR_bloc_4_orders.Events;
-using MSPR_bloc_4_products.Data;
-using MSPR_bloc_4_products.Models;
-using RabbitMQ.Stream.Client;
+﻿using RabbitMQ.Stream.Client;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using MSPR_bloc_4_products.Data;
+using MSPR_bloc_4_products.Models;
+using MSPR_bloc_4_orders.Events;
 
 namespace MSPR_bloc_4_products.Services
 {
@@ -32,46 +32,30 @@ namespace MSPR_bloc_4_products.Services
 
             if (!await system.StreamExists(streamName))
             {
-                Console.WriteLine($"[RabbitMqConsumer] Stream '{streamName}' does not exist, creating...");
                 await system.CreateStream(new StreamSpec(streamName));
             }
-
-            Console.WriteLine($"[RabbitMqConsumer] Starting Raw Consumer on stream '{streamName}'...");
 
             await system.CreateRawConsumer(
                 new RawConsumerConfig(streamName)
                 {
                     MessageHandler = async (consumer, ctx, message) =>
                     {
-                        try
+                        var json = Encoding.UTF8.GetString(message.Data.Contents);
+                        var orderEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(json);
+                        if (orderEvent != null)
                         {
-                            var json = Encoding.UTF8.GetString(message.Data.Contents);
-                            Console.WriteLine($"[RabbitMqConsumer] Received: {json}");
-
-                            var orderEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(json);
-
-                            if (orderEvent != null)
+                            foreach (var item in orderEvent.Products)
                             {
-                                foreach (var item in orderEvent.Products)
+                                var product = await _context.Products.FindAsync(item.ProductId);
+                                if (product != null && product.Stock.HasValue)
                                 {
-                                    var product = await _context.Products.FindAsync(item.ProductId);
-                                    if (product != null && product.Stock.HasValue)
-                                    {
-                                        product.Stock -= item.Quantity;
-                                    }
+                                    product.Stock -= item.Quantity;
                                 }
-                                await _context.SaveChangesAsync();
-                                Console.WriteLine($"[RabbitMqConsumer] Stock updated for Order {orderEvent.OrderId}");
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[RabbitMqConsumer] Error processing message: {ex.Message}");
+                            await _context.SaveChangesAsync();
                         }
                     }
                 });
-
-            Console.WriteLine("[RabbitMqConsumer] Raw Consumer initialized and listening.");
         }
     }
 }
