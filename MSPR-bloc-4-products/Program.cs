@@ -67,6 +67,9 @@ if (!isTesting)
 }
 else
 {
+
+    // Ajout d'un handler minimaliste pour satisfaire UseAuthorization sans package externe
+
     builder.Services.AddAuthentication("TestAuth")
         .AddScheme<AuthenticationSchemeOptions, DummyHandler>("TestAuth", _ => { });
 }
@@ -75,6 +78,7 @@ builder.Services.AddControllers();
 
 // Injection RabbitMQ Streams Consumer
 builder.Services.AddSingleton<RabbitMqConsumer>();
+
 
 var app = builder.Build();
 
@@ -89,6 +93,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Toujours utiliser Auth pour satisfaire Authorization Middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -97,7 +102,7 @@ app.Run();
 
 public partial class Program { }
 
-// DummyHandler interne sans dépendance pour mocker automatiquement le user dans les tests
+// DummyHandler interne sans dÃ©pendance pour mocker automatiquement le user dans les tests
 public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public DummyHandler(

@@ -51,7 +51,7 @@ namespace MSPR_bloc_4_products.Controllers
         }
 
         // POST: api/Products
-        [Authorize]
+        [Authorize(Roles = "admin,moderator")]
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
@@ -63,6 +63,7 @@ namespace MSPR_bloc_4_products.Controllers
         }
 
         // PUT: api/Products/5
+        [Authorize(Roles = "admin,moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, Product product)
         {
@@ -87,7 +88,7 @@ namespace MSPR_bloc_4_products.Controllers
         }
 
         // DELETE: api/Products/5
-        [Authorize]
+        [Authorize(Roles = "admin,moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
