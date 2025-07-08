@@ -10,19 +10,24 @@ using MSPR_bloc_4_products.Services;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 bool isTesting = builder.Environment.IsEnvironment("Testing");
 
-// DbContext conditionnel
+// DbContext
 builder.Services.AddDbContext<ProductDbContext>(options =>
 {
     if (!isTesting)
+    {
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+    else
+    {
+        options.UseInMemoryDatabase("TestDb");
+    }
 });
 
-// Swagger avec JWT
+// Swagger + JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Products API", Version = "v1" });
@@ -47,7 +52,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Authentification JWT ou Mock
+// Authentication
 if (!isTesting)
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -61,7 +66,7 @@ if (!isTesting)
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = builder.Configuration["Jwt:Issuer"],
                 ValidAudience = builder.Configuration["Jwt:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev_key"))
             };
         });
 }
@@ -73,19 +78,10 @@ else
 
 builder.Services.AddControllers();
 
-// Injection RabbitMQ Streams Consumer uniquement si ce n'est pas un test
-if (!isTesting)
-{
-    builder.Services.AddSingleton<RabbitMqConsumer>();
-}
+// RabbitMQ Consumer registered as Hosted Service
+builder.Services.AddHostedService<RabbitMqConsumer>();
 
 var app = builder.Build();
-
-// Initialisation du Consumer RabbitMQ uniquement si ce n'est pas un test
-if (!isTesting)
-{
-    var consumer = app.Services.GetRequiredService<RabbitMqConsumer>();
-}
 
 if (app.Environment.IsDevelopment())
 {
@@ -101,7 +97,6 @@ app.Run();
 
 public partial class Program { }
 
-// DummyHandler pour les tests (Mock Auth)
 public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public DummyHandler(
@@ -109,8 +104,7 @@ public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock)
-        : base(options, logger, encoder, clock)
-    { }
+        : base(options, logger, encoder, clock) { }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
