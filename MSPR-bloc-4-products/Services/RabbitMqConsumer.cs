@@ -33,7 +33,7 @@ namespace MSPR_bloc_4_products.Services
                 {
                     UserName = "guest",
                     Password = "guest",
-                    Endpoints = { new IPEndPoint(IPAddress.Loopback, 5552) }
+                    Endpoints = { new IPEndPoint(Dns.GetHostEntry("rabbitmq").AddressList[0], 5552) }
                 };
 
                 _system = await StreamSystem.Create(config);
