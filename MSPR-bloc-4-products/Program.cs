@@ -6,22 +6,28 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MSPR_bloc_4_products.Data;
+using MSPR_bloc_4_products.Services;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 bool isTesting = builder.Environment.IsEnvironment("Testing");
 
-// DbContext conditionnel
+// DbContext
 builder.Services.AddDbContext<ProductDbContext>(options =>
 {
     if (!isTesting)
+    {
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+    else
+    {
+        options.UseInMemoryDatabase("TestDb");
+    }
 });
 
-// Swagger avec JWT
+// Swagger + JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Products API", Version = "v1" });
@@ -46,32 +52,34 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Authentification JWT ou Mock
+// Authentication
 if (!isTesting)
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-        };
-    });
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev_key"))
+            };
+        });
 }
 else
 {
-    // Ajout d'un handler minimaliste pour satisfaire UseAuthorization sans package externe
     builder.Services.AddAuthentication("TestAuth")
         .AddScheme<AuthenticationSchemeOptions, DummyHandler>("TestAuth", _ => { });
 }
 
 builder.Services.AddControllers();
+
+// RabbitMQ Consumer registered as Hosted Service
+builder.Services.AddHostedService<RabbitMqConsumer>();
 
 var app = builder.Build();
 
@@ -82,17 +90,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Toujours utiliser Auth pour satisfaire Authorization Middleware
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 app.Run();
 
 public partial class Program { }
 
-// DummyHandler interne sans dépendance pour mocker automatiquement le user dans les tests
 public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public DummyHandler(
@@ -100,8 +104,7 @@ public class DummyHandler : AuthenticationHandler<AuthenticationSchemeOptions>
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock)
-        : base(options, logger, encoder, clock)
-    { }
+        : base(options, logger, encoder, clock) { }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
